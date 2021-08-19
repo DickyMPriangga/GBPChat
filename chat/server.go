@@ -26,7 +26,7 @@ func main() {
 	var addr = flag.String("addr", ":8080", "The addr of the app.")
 	flag.Parse()
 
-	r := NewRoom()
+	r := newRoom()
 	http.Handle("/", &templateHandler{filename: "index.html"})
 	http.Handle("/room", r)
 
