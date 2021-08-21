@@ -1,6 +1,7 @@
 package main
 
 import (
+	"GPBChat/auth"
 	"flag"
 	"log"
 	"net/http"
@@ -27,7 +28,8 @@ func main() {
 	flag.Parse()
 
 	r := newRoom()
-	http.Handle("/", &templateHandler{filename: "index.html"})
+	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "index.html"}))
+	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.Handle("/room", r)
 
 	go r.run()
