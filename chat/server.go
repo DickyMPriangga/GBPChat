@@ -29,7 +29,16 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.once.Do(func() {
 		t.templ = template.Must(template.ParseFiles(filepath.Join("views", t.filename)))
 	})
-	t.templ.Execute(w, r)
+
+	data := map[string]interface{}{
+		"Host": r.Host,
+	}
+
+	if authCookie, err := r.Cookie("auth"); err == nil {
+		data["UserData"] = objx.MustFromBase64(authCookie.Value)
+	}
+
+	t.templ.Execute(w, data)
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +116,7 @@ func main() {
 	)
 
 	r := newRoom()
-	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "index.html"}))
+	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.HandleFunc("/auth/", loginHandler)
 	http.Handle("/room", r)
