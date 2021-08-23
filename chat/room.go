@@ -4,6 +4,7 @@ import (
 	"GPBChat/trace"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/objx"
@@ -56,7 +57,7 @@ func newRoom() *room {
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
-		tracer:  trace.Off(),
+		tracer:  trace.New(os.Stdout),
 	}
 }
 
@@ -74,7 +75,7 @@ func (r *room) run() {
 			r.tracer.Trace("Message received: ", msg)
 			for client := range r.clients {
 				client.send <- msg
-				r.tracer.Trace("-- sent to client")
+				r.tracer.Trace("-- sent to client : Name - ", client.userData["name"])
 			}
 		}
 	}

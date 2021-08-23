@@ -85,7 +85,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		authCookieValue := objx.New(map[string]interface{}{
-			"name": user.Name(),
+			"name":       user.Name(),
+			"avatar_url": user.AvatarURL(),
 		}).MustBase64()
 
 		http.SetCookie(w, &http.Cookie{
@@ -98,6 +99,17 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   "auth",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+	w.Header().Set("Location", "/chat")
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 func main() {
@@ -119,6 +131,7 @@ func main() {
 	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.HandleFunc("/auth/", loginHandler)
+	http.HandleFunc("/logout", logoutHandler)
 	http.Handle("/room", r)
 
 	go r.run()
