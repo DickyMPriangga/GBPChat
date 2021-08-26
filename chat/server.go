@@ -86,6 +86,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		authCookieValue := objx.New(map[string]interface{}{
 			"name":       user.Name(),
+			"email":      user.Email(),
 			"avatar_url": user.AvatarURL(),
 		}).MustBase64()
 
@@ -127,7 +128,7 @@ func main() {
 			"http://localhost:8080/auth/callback/google"),
 	)
 
-	r := newRoom()
+	r := newRoom(UseGravatar)
 	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.HandleFunc("/auth/", loginHandler)

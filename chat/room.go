@@ -4,7 +4,6 @@ import (
 	"GPBChat/trace"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/objx"
@@ -16,6 +15,7 @@ type room struct {
 	leave   chan *client
 	clients map[*client]bool
 	tracer  trace.Tracer
+	avatar  Avatar
 }
 
 const (
@@ -51,13 +51,14 @@ func (rm *room) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	client.read()
 }
 
-func newRoom() *room {
+func newRoom(avatar Avatar) *room {
 	return &room{
 		forward: make(chan *message),
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
-		tracer:  trace.New(os.Stdout),
+		tracer:  trace.Off(),
+		avatar:  avatar,
 	}
 }
 
