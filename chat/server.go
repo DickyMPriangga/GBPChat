@@ -2,12 +2,11 @@ package main
 
 import (
 	"GPBChat/auth"
+	"GPBChat/upload"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
-	"strings"
 	"sync"
 	"text/template"
 
@@ -41,78 +40,6 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.templ.Execute(w, data)
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	split := strings.Split(r.URL.Path, "/")
-
-	if len(split) < 4 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	action := split[2]
-	provider := split[3]
-
-	switch action {
-	case "login":
-		//Login Action Handler
-		provider, err := gomniauth.Provider(provider)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error when trying to get provider %s: %s", provider, err), http.StatusBadRequest)
-			return
-		}
-		loginUrl, err := provider.GetBeginAuthURL(nil, nil)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error when trying to GetBeginAuthURL for %s:%s", provider, err), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Location", loginUrl)
-		w.WriteHeader(http.StatusTemporaryRedirect)
-	case "callback":
-		//Callback Action Handler
-		provider, err := gomniauth.Provider(provider)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error when trying to complete auth for %s : %s", provider, err), http.StatusBadRequest)
-			return
-		}
-		creds, err := provider.CompleteAuth(objx.MustFromURLQuery(r.URL.RawQuery))
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error when trying to get user from %s : %s", provider, err), http.StatusInternalServerError)
-			return
-		}
-		user, err := provider.GetUser(creds)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error when trying to get user from %s : %s", provider, err), http.StatusInternalServerError)
-			return
-		}
-		authCookieValue := objx.New(map[string]interface{}{
-			"name":       user.Name(),
-			"email":      user.Email(),
-			"avatar_url": user.AvatarURL(),
-		}).MustBase64()
-
-		http.SetCookie(w, &http.Cookie{
-			Name:  "auth",
-			Value: authCookieValue,
-			Path:  "/",
-		})
-		w.Header().Set("Location", "/chat")
-		w.WriteHeader(http.StatusTemporaryRedirect)
-	default:
-		w.WriteHeader(http.StatusNotFound)
-	}
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:   "auth",
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
-	})
-	w.Header().Set("Location", "/chat")
-	w.WriteHeader(http.StatusTemporaryRedirect)
-}
-
 func main() {
 	var addr = flag.String("addr", ":8080", "The addr of the app.")
 	flag.Parse()
@@ -131,8 +58,10 @@ func main() {
 	r := newRoom(UseGravatar)
 	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
-	http.HandleFunc("/auth/", loginHandler)
-	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/auth/", auth.LoginHandler)
+	http.HandleFunc("/logout", auth.LogoutHandler)
+	http.Handle("/upload", auth.MustAuth(&templateHandler{filename: "upload.html"}))
+	http.HandleFunc("/uploader", upload.UploadHandler)
 	http.Handle("/room", r)
 
 	go r.run()
