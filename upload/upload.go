@@ -19,7 +19,7 @@ func UploadHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	filename := path.Join("avatars", userid+path.Ext(header.Filename))
+	filename := path.Join("avatars_img", userid+path.Ext(header.Filename))
 	err = ioutil.WriteFile(filename, data, 0777)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

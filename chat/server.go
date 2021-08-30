@@ -1,7 +1,6 @@
 package main
 
 import (
-	"GPBChat/auth"
 	"GPBChat/upload"
 	"flag"
 	"log"
@@ -40,6 +39,8 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.templ.Execute(w, data)
 }
 
+var avatars Avatar = UseFileSystemAvatar
+
 func main() {
 	var addr = flag.String("addr", ":8080", "The addr of the app.")
 	flag.Parse()
@@ -55,13 +56,14 @@ func main() {
 			"http://localhost:8080/auth/callback/google"),
 	)
 
-	r := newRoom(UseGravatar)
-	http.Handle("/chat", auth.MustAuth(&templateHandler{filename: "chat.html"}))
+	r := newRoom()
+	http.Handle("/chat", MustAuth(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
-	http.HandleFunc("/auth/", auth.LoginHandler)
-	http.HandleFunc("/logout", auth.LogoutHandler)
-	http.Handle("/upload", auth.MustAuth(&templateHandler{filename: "upload.html"}))
+	http.HandleFunc("/auth/", LoginHandler)
+	http.HandleFunc("/logout", LogoutHandler)
+	http.Handle("/upload", MustAuth(&templateHandler{filename: "upload.html"}))
 	http.HandleFunc("/uploader", upload.UploadHandler)
+	http.Handle("/avatars_img/", http.StripPrefix("/avatars_img/", http.FileServer(http.Dir("./avatars_img"))))
 	http.Handle("/room", r)
 
 	go r.run()

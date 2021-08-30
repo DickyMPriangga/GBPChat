@@ -2,12 +2,26 @@ package main
 
 import (
 	"errors"
+	"io/ioutil"
+	"path"
+
+	gomniauthcommon "github.com/stretchr/gomniauth/common"
 )
 
 var ErrNoAvatarURL = errors.New("chat: Unable to get an avatar URL")
 
+type ChatUser interface {
+	UniqueID() string
+	AvatarURL() string
+}
+
 type Avatar interface {
-	GetAvatarURL(c *client) (string, error)
+	GetAvatarURL(u ChatUser) (string, error)
+}
+
+type chatUser struct {
+	gomniauthcommon.User
+	uniqueID string
 }
 
 type AvatarAuth struct {
@@ -16,37 +30,47 @@ type AvatarAuth struct {
 type GravatarAvatar struct {
 }
 
-var UseAuthAvatar AvatarAuth
-var UseGravatar GravatarAvatar
-
-func (AvatarAuth) GetAvatarURL(c *client) (string, error) {
-	url, ok := c.userData["avatar_url"]
-
-	if !ok {
-		return "", ErrNoAvatarURL
-	}
-
-	urlStr, ok := url.(string)
-
-	if !ok {
-		return "", ErrNoAvatarURL
-	}
-
-	return urlStr, nil
+type FileSystemAvatar struct {
 }
 
-func (GravatarAvatar) GetAvatarURL(c *client) (string, error) {
-	userid, ok := c.userData["userid"]
+func (u chatUser) UniqueID() string {
+	return u.uniqueID
+}
 
-	if !ok {
+var UseAuthAvatar AvatarAuth
+var UseGravatar GravatarAvatar
+var UseFileSystemAvatar FileSystemAvatar
+
+func (AvatarAuth) GetAvatarURL(u ChatUser) (string, error) {
+	url := u.AvatarURL()
+
+	if len(url) == 0 {
 		return "", ErrNoAvatarURL
 	}
 
-	useridStr, ok := userid.(string)
+	return url, nil
+}
 
-	if !ok {
+func (GravatarAvatar) GetAvatarURL(u ChatUser) (string, error) {
+	return "//www.gravatar.com/avatar/" + u.AvatarURL(), nil
+}
+
+func (FileSystemAvatar) GetAvatarURL(u ChatUser) (string, error) {
+	files, err := ioutil.ReadDir("avatars_img")
+
+	if err != nil {
 		return "", ErrNoAvatarURL
 	}
 
-	return "//www.gravatar.com/avatar/" + useridStr, nil
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		if match, _ := path.Match(u.UniqueID()+"*", file.Name()); match {
+			return "/avatars_img/" + file.Name(), nil
+		}
+	}
+
+	return "", ErrNoAvatarURL
 }
