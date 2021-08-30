@@ -39,7 +39,11 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.templ.Execute(w, data)
 }
 
-var avatars Avatar = UseFileSystemAvatar
+var avatars Avatar = TryAvatar{
+	UseFileSystemAvatar,
+	UseAuthAvatar,
+	UseGravatar,
+}
 
 func main() {
 	var addr = flag.String("addr", ":8080", "The addr of the app.")

@@ -19,6 +19,8 @@ type Avatar interface {
 	GetAvatarURL(u ChatUser) (string, error)
 }
 
+type TryAvatar []Avatar
+
 type chatUser struct {
 	gomniauthcommon.User
 	uniqueID string
@@ -40,6 +42,16 @@ func (u chatUser) UniqueID() string {
 var UseAuthAvatar AvatarAuth
 var UseGravatar GravatarAvatar
 var UseFileSystemAvatar FileSystemAvatar
+
+func (a TryAvatar) GetAvatarURL(u ChatUser) (string, error) {
+	for _, avatar := range a {
+		if url, err := avatar.GetAvatarURL(u); err == nil {
+			return url, nil
+		}
+	}
+
+	return "", ErrNoAvatarURL
+}
 
 func (AvatarAuth) GetAvatarURL(u ChatUser) (string, error) {
 	url := u.AvatarURL()
